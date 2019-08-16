@@ -283,6 +283,51 @@ let api = function Binance() {
     };
 
     /**
+     * 
+     * @param {*} side 
+     * @param {*} symbol 
+     * @param {*} quantity 
+     * @param {*} price 
+     * @param {*} stopPrice 
+     * @param {*} stopLimitPrice 
+     * @param {*} flags 
+     * @param {*} callback 
+     */
+    const ocOrder = function (side, symbol, quantity, price, stopPrice, stopLimitPrice, flags = {}, callback = false) {
+        let endpoint = 'v3/order/oco';
+        let opt = {
+            symbol: symbol,
+            side: side,
+            quantity: quantity,
+            price: price,
+            stopPrice: stopPrice,
+        };
+
+        if (typeof stopLimitPrice !== 'undefined') opt.stopLimitPrice = stopLimitPrice;
+
+        if (typeof flags.listClientOrderId !== 'undefined') opt.listClientOrderId = flags.listClientOrderId;
+        if (typeof flags.limitClientOrderId !== 'undefined') opt.limitClientOrderId = flags.limitClientOrderId;
+        if (typeof flags.limitIcebergQty !== 'undefined') opt.limitIcebergQty = flags.limitIcebergQty;
+        if (typeof flags.stopClientOrderId !== 'undefined') opt.stopClientOrderId = flags.stopClientOrderId;
+        if (typeof flags.stopIcebergQty !== 'undefined') opt.stopIcebergQty = flags.stopIcebergQty;
+        if (typeof flags.stopLimitTimeInForce !== 'undefined') opt.stopLimitTimeInForce = flags.stopLimitTimeInForce;
+        if (typeof flags.newOrderRespType !== 'undefined') opt.newOrderRespType = flags.newOrderRespType;
+
+        signedRequest(base + endpoint, opt, function (error, response) {
+            if (!response) {
+                if (callback) callback(error, response);
+                else Binance.options.log('Order() error:', error);
+                return;
+            }
+            if (typeof response.msg !== 'undefined' && response.msg === 'Filter failure: MIN_NOTIONAL') {
+                Binance.options.log('Order quantity too small. See exchangeInfo() for minimum amounts');
+            }
+            if (callback) callback(error, response);
+            else Binance.options.log(side + '(' + symbol + ',' + quantity + ',' + price + ',' + stopPrice + ',' + stopLimitPrice + ') ', response);
+        }, 'POST');
+    };
+
+    /**
      * No-operation function
      * @return {undefined}
      */
@@ -1088,6 +1133,20 @@ let api = function Binance() {
             return this;
         },
 
+        /**
+        * Creates an order cancel order
+        * @param {string} side - BUY or SELL
+        * @param {string} symbol - the symbol to buy
+        * @param {numeric} quantity - the quantity required
+        * @param {numeric} price - the price to pay for each unit
+        * @param {object} flags - aadditionalbuy order flags
+        * @param {function} callback - the callback function
+        * @return {undefined}
+        */
+        ocOrder: function (side, symbol, quantity, price, stopPrice, stopLimitPrice, flags = {}, callback = false) {
+            ocOrder(side, symbol, quantity, price, stopPrice, stopLimitPrice, flags, callback);
+        },
+
 
         /**
         * Creates an order
@@ -1236,6 +1295,19 @@ let api = function Binance() {
             let parameters = Object.assign({ symbol: symbol }, options);
             signedRequest(base + 'v3/allOrders', parameters, function (error, data) {
                 if (callback) return callback.call(this, error, data, symbol);
+            });
+        },
+
+        /**
+        * Gets all ocOrder of a given symbol
+        * @param {string} symbol - the symbol
+        * @param {function} callback - the callback function
+        * @param {object} options - additional options
+        * @return {undefined}
+        */
+        allOrderList: function (callback, options = {}) {
+            signedRequest(base + 'v3/allOrderList', options, function (error, data) {
+                if (callback) return callback.call(this, error, data);
             });
         },
 
